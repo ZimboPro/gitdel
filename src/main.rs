@@ -1,7 +1,5 @@
 // git fetch --prune && git branch -r | awk "{print \$1}" | egrep -v -f /dev/fd/0 <(`git branch -vv` | grep origin) | awk "{print \$1}" | xargs git branch -d
 
-use anyhow;
-use requestty::{Choice, Separator};
 use std::process::Command;
 
 #[derive(Debug)]
@@ -13,13 +11,13 @@ struct Branches {
 fn main() -> anyhow::Result<()> {
     println!("Fetching remote branches...");
     let status = Command::new("git")
-        .args(&["fetch", "--prune"])
+        .args(["fetch", "--prune"])
         .status()
         .expect("failed to execute git fetch --prune");
 
     if status.success() {
         let output = Command::new("git")
-            .args(&["branch", "-v"])
+            .args(["branch", "-v"])
             .output()
             .expect("Failed to execute git branch -v");
         let output = String::from_utf8(output.stdout)?;
@@ -49,7 +47,7 @@ fn delete_branches(branches: Vec<String>) -> anyhow::Result<Vec<String>> {
     let mut failed_deletions = Vec::new();
     for branch in branches {
         let status = Command::new("git")
-            .args(&["branch", "-d", &branch])
+            .args(["branch", "-d", &branch])
             .output()
             .expect("failed to execute git branch -d");
         if !status.status.success() {
@@ -71,7 +69,7 @@ fn force_deletion_if_approved(failed_deletions: Vec<String>) -> anyhow::Result<(
     for r in result {
         println!("Deleting branch: {}", r.text);
         let output = Command::new("git")
-            .args(&["branch", "-D", &r.text])
+            .args(["branch", "-D", &r.text])
             .output()
             .expect("failed to execute git branch -D");
         if !output.status.success() {
@@ -82,15 +80,15 @@ fn force_deletion_if_approved(failed_deletions: Vec<String>) -> anyhow::Result<(
 }
 
 fn get_branches_from_output(output: &str) -> Vec<String> {
-    let branches: Vec<&str> = output.trim().split("\n").collect();
+    let branches: Vec<&str> = output.trim().split('\n').collect();
     let branches: Vec<&&str> = branches
         .iter()
-        .filter(|b| b.contains("[gone]") && !b.contains("*"))
+        .filter(|b| b.contains("[gone]") && !b.contains('*'))
         .collect();
     let branches: Vec<String> = branches
         .iter()
         .map(|b| {
-            let v: Vec<&str> = b.trim().split(" ").collect();
+            let v: Vec<&str> = b.trim().split(' ').collect();
             v[0].trim().to_string()
         })
         .collect();
