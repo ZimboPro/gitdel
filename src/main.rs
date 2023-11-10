@@ -9,6 +9,7 @@ struct Branches {
 }
 
 fn main() -> anyhow::Result<()> {
+    println!("NOTE: If this is run in the built-in VS Code terminal with Git Bash. It will not work. Run it in a normal terminal or in CMD, PowerShell, etc.");
     println!("Fetching remote branches...");
     let status = Command::new("git")
         .args(["fetch", "--prune"])
