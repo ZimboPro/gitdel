@@ -1,14 +1,17 @@
 // git fetch --prune && git branch -r | awk "{print \$1}" | egrep -v -f /dev/fd/0 <(`git branch -vv` | grep origin) | awk "{print \$1}" | xargs git branch -d
 
+use clap::Parser;
 use std::process::Command;
 
-#[derive(Debug)]
-struct Branches {
-    main: String,
-    branches: Vec<String>,
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Arguments {
+    #[arg(short, long)]
+    all: bool,
 }
 
 fn main() -> anyhow::Result<()> {
+    let args = Arguments::parse();
     println!("NOTE: If this is run in the built-in VS Code terminal with Git Bash. It will not work. Run it in a normal terminal or in CMD, PowerShell, etc.");
     println!("Fetching remote branches...");
     let status = Command::new("git")
@@ -32,8 +35,10 @@ fn main() -> anyhow::Result<()> {
 
         let failed_deletions = delete_branches(branches)?;
 
-        if !failed_deletions.is_empty() {
+        if !failed_deletions.is_empty() && !args.all {
             force_deletion_if_approved(failed_deletions)?;
+        } else if !failed_deletions.is_empty() && args.all {
+            force_delete_branches(failed_deletions)?;
         }
     } else {
         return Err(anyhow::anyhow!(
@@ -66,15 +71,24 @@ fn force_deletion_if_approved(failed_deletions: Vec<String>) -> anyhow::Result<(
         .choices(failed_deletions)
         .build();
     let result = requestty::prompt_one(question)?;
-    let result = result.try_into_list_items().expect("Error getting results");
-    for r in result {
-        println!("Deleting branch: {}", r.text);
+    let result = result
+        .try_into_list_items()
+        .expect("Error getting results")
+        .into_iter()
+        .map(|r| r.text)
+        .collect();
+    force_delete_branches(result)
+}
+
+fn force_delete_branches(branches: Vec<String>) -> anyhow::Result<()> {
+    for r in branches {
+        println!("Deleting branch: {}", r);
         let output = Command::new("git")
-            .args(["branch", "-D", &r.text])
+            .args(["branch", "-D", &r])
             .output()
             .expect("failed to execute git branch -D");
         if !output.status.success() {
-            println!("Failed to delete branch: {}", r.text);
+            println!("Failed to delete branch: {}", r);
         }
     }
     Ok(())
